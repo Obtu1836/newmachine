@@ -5,7 +5,7 @@ from ensemble.boosting.cart import Cart
 from sklearn.datasets import load_wine
 from sklearn.model_selection import cross_validate
 from sklearn.metrics import make_scorer, precision_score, accuracy_score, recall_score
-from sklearn.base import BaseEstimator, RegressorMixin
+from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.model_selection import StratifiedKFold
 
 
@@ -35,7 +35,7 @@ class LabelEncoder:
         return self.lab[coderlabel]
 
 
-class GBDT(RegressorMixin, BaseEstimator):
+class GBDT(ClassifierMixin, BaseEstimator):
 
     def __init__(self, min_samples_leaf: int, min_samples_split: int,
                  max_depth: int, lr: float, n_trees: int):
