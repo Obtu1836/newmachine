@@ -2,9 +2,10 @@ import numpy as np
 from numpy.typing import NDArray
 import pandas as pd
 from sklearn.preprocessing import OrdinalEncoder,LabelEncoder
-from sklearn.datasets import load_digits
-from sklearn.model_selection import cross_validate
+from sklearn.datasets import load_digits,fetch_openml
+from sklearn.model_selection import cross_validate,StratifiedKFold
 from sklearn.base import ClassifierMixin,BaseEstimator
+from sklearn.naive_bayes import MultinomialNB   
 
 class NaiveBayes(ClassifierMixin,BaseEstimator):
 
@@ -82,8 +83,10 @@ class NaiveBayes(ClassifierMixin,BaseEstimator):
         n_features = test.shape[1]
         '''通过合理的构造索引 向量化方式取值 速度快'''
         joint_proba = self.log_model[:, np.arange(n_features), test].sum(axis=2)
-        final_prob = joint_proba+self.log_y_prob[:, None] #贝叶斯公式
-        idx = np.argmax(final_prob, axis=0)
+        # joint_proba 的形状是 (类别数, 样本数)
+        joint_proba = joint_proba + self.log_y_prob[:, None] 
+        # argmax(axis=0) 取出的是每个样本对应的最大类别索引
+        idx = np.argmax(joint_proba, axis=0)
 
         return self.ycoder.inverse_transform(self.classes_[idx])
 
@@ -93,8 +96,12 @@ def main():
     x,y=load_digits(return_X_y=True)
     x=np.asarray(x)
     model=NaiveBayes(1)
+    # model=MultinomialNB(alpha=1)
 
-    res=cross_validate(model,x,y,cv=5,scoring='accuracy')
+    cv_style=StratifiedKFold(5,shuffle=True)
+    
+
+    res=cross_validate(model,x,y,cv=cv_style,scoring='accuracy')
     print(f"acc: {res['test_score'].mean():.3f}")
     
 

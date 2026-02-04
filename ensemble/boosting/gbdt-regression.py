@@ -61,13 +61,13 @@ def main():
     cart.fit(trainx, trainy)
     cart_yp = cart.predict(testx)
 
-    print(f"cart_r2:{r2_score(testy, cart_yp)}")
+    print(f"{'单棵树r2:':<8}: {r2_score(testy, cart_yp):.3f}")
 
     gbdt = GBDTregressor(50, 0.5, 5,5)
     gbdt.fit(trainx, trainy)
     gbdt_yp = gbdt.predict(testx)
 
-    print(f'gbdt_r2: {r2_score(testy, gbdt_yp)}')
+    print(f"{"集成树r2:":<8}: {r2_score(testy, gbdt_yp):.3f}")
 
 
 if __name__ == '__main__':
