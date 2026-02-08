@@ -55,7 +55,7 @@ class GaussMixture:
         init_loss=-np.inf
         for i in range(self.max_iters):
             hidden,loss=self.e_step(mean,cov,weight)
-            if abs(loss-init_loss)<self.rtol:
+            if abs(loss-init_loss)<self.rtol*abs(loss):
                 # print('end!!')
                 break
             new_mean,new_cov,new_weight=self.m_step(hidden)
@@ -127,10 +127,12 @@ class GaussMixture:
         for i in range(self.k):
             mulmal=multivariate_normal(self.mean[i],self.cov[i],allow_singular=True)
             log_probs[:,i]=mulmal.logpdf(X)
-        log_probs+=np.log(self.weight)
+        log_probs+=np.log(self.weight+self.rtol)
 
-        # return np.asarray(logsumexp(log_probs, axis=1))
-        return log_probs
+        log_axis=logsumexp(log_probs,axis=1)
+        log_axis=np.asarray(log_axis)[:,None]
+
+        return np.exp(log_probs-log_axis)
     
 
 def match_label(yt,yp):
@@ -151,7 +153,7 @@ def main():
     x,y=make_blobs(2000,n_features=2,centers=k)[:2]
     fig,ax=plt.subplots(1,2,figsize=(10,6))
 
-    model=GaussMixture(k,max_iters=200)
+    model=GaussMixture(k,max_iters=2000,alpha=1e-4)
     model.fit(x)
     prob=model.predict_proba(x)
     yp=prob.argmax(axis=1)

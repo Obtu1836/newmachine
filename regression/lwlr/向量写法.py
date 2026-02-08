@@ -21,9 +21,10 @@ class Lwlr:
         dis2=np.sum(np.power(test[:,None]-self.x,2),axis=2) #(m,n)
         dis2=np.exp(-dis2/(2*self.sigma**2)) #(m,n)
         
-        bx=np.stack([self.x]*len(test),axis=0) #(m,n,r)
-        by=np.stack([self.y]*len(test),axis=0) #(m,n,1)
-        
+        # bx=np.stack([self.x]*len(test),axis=0) #(m,n,r)
+        # by=np.stack([self.y]*len(test),axis=0) #(m,n,1)
+        bx=self.x[None,...]
+        by=self.y[None,...]        
         bxT=bx.transpose(0,2,1)  #(m,r,n)
         bxTq=bxT*dis2[:,None,:] # #(m,r,n)
         bxTqx=bxTq@bx  #(m,r,r)

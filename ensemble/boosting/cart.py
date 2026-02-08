@@ -2,7 +2,7 @@ import numpy as np
 from numpy.typing import NDArray
 import sys
 
-from sklearn.datasets import make_regression
+from sklearn.datasets import make_regression,load_diabetes
 from sklearn.metrics import r2_score,mean_squared_error
 from sklearn.model_selection import train_test_split
 
@@ -102,6 +102,7 @@ class Cart:
 def main():
 
     x,y=make_regression(1200,3)[:2]
+    # x,y=load_diabetes(return_X_y=True)
 
     x_train,x_test,y_train,y_test=train_test_split(x,y,train_size=0.8)
 
