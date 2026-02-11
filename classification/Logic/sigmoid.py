@@ -22,8 +22,8 @@ class Logic(ClassifierMixin,BaseEstimator):
         return (1/(1+np.exp(xw)))
     
     def loss(self,x:NDArray,w:NDArray,y,weight,):
-
-        return -(weight*(y*x.dot(w)+np.log(1-self.sigmoid(x,w)))).sum()
+        m=x.shape[0]
+        return -(weight*(y*x.dot(w)+np.log(1-self.sigmoid(x,w)))).sum()/m
     
     def fit(self,x,y):
         x=np.column_stack([x,np.ones(len(x))])
