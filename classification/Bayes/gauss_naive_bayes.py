@@ -25,7 +25,7 @@ class GaussBayes(ClassifierMixin,BaseEstimator):
     def fit(self,x:NDArray,y:NDArray):
 
         self.classes_,nums=np.unique(y,return_counts=True)# 统计标签 用于计算先验概率
-        self.log_y=np.log(nums/nums.sum()) #计算先验概率 并转对疏
+        self.log_y=np.log(nums/nums.sum()+1e-8) #计算先验概率 并转对疏
 
         df=pd.DataFrame(x) 
         groups:pd.DataFrame=df.groupby(y).agg(['mean','var'])# 按列 计算各列的均值和方差
@@ -61,14 +61,15 @@ class GaussBayes(ClassifierMixin,BaseEstimator):
         '''
         向量化实现 快速推导 避免 pandas 开销
         '''
+        x=np.atleast_2d(X) #(m,r)
 
-        X=np.atleast_2d(X)[None,:,:]  #(1,m,r)
-        means=self.groups.loc[:,('mean')].to_numpy()[:,None,:] #(k,1,r)
-        vars=(self.groups.loc[:,'var']+self.var_smothing).to_numpy()[:,None,:] #(k,1,r)
+        means=self.groups['mean'].to_numpy() #(k,r)
+        vars=self.groups['var'].to_numpy()+self.var_smothing #(k,r)
 
-        cond_proba=-1/2*np.log(2*np.pi*vars)+(-(X-means)**2/(2*vars)) #高斯概率密度函数 (k,m,r)
-        joint_proba=(cond_proba.sum(axis=2))+self.log_y[:,None] # (k,m)
-        softmax_logproba=self._softmax(joint_proba.T)
+        cond_proba=-0.5*np.log(2*np.pi*vars[None,...])-(x[:,None]-means)**2/(2*vars[None,...]) #(m,k,r)
+
+        joint_proba=(cond_proba.sum(axis=2))+self.log_y
+        softmax_logproba=self._softmax(joint_proba)
 
         return softmax_logproba
         
@@ -93,7 +94,6 @@ def main():
     results=cross_validate(model,x,y,cv=cv_style)
 
     print(f"acc: {results['test_score'].mean():.4f}")
-
 
 
 if __name__ == '__main__':
