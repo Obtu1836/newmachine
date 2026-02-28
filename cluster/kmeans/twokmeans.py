@@ -1,7 +1,7 @@
 import numpy as np
 from numpy.typing import NDArray
-from cluster.km.roulette import drawing
-from cluster.km.kmeans import kmean
+from cluster.kmeans.roulette import drawing
+from cluster.kmeans.kmeans import kmean
 from sklearn.datasets import make_blobs
 import matplotlib.pyplot as plt
 

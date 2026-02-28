@@ -2,7 +2,7 @@ import numpy as np
 from numpy.typing import NDArray
 from numpy.linalg import norm
 import matplotlib.pyplot as plt
-from cluster.km.roulette import roulette_method,drawing
+from cluster.kmeans.roulette import roulette_method
 from sklearn.datasets import make_blobs
 
 # from scipy.spatial.distance import cdist

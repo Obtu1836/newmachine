@@ -1,5 +1,5 @@
 import numpy as np
-from cluster.km.twokmeans import twokmean
+from cluster.kmeans.twokmeans import twokmean
 from sklearn.datasets import make_blobs
 from scipy.optimize import linear_sum_assignment
 from sklearn.metrics import accuracy_score
