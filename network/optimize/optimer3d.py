@@ -21,8 +21,17 @@ from matplotlib.animation import FuncAnimation
       和autograd 分别实现
     3 梯度下降法 根据迭代公式 w=w-lr*grad
       更新 新的点位,每一次迭代 梯度下降一次 也就会增加一个轨迹 跌代结束 也就有了下降的轨迹
-'''
+    4 动画演示过程中 最快到达最低点的 并不意味着某个优化器就一定比其他的好 只能说 当前数据分布
+      可能更适合该优化器 在预设的数据下 rms_moment比纯动量的还快 即使初始学习率还要小于纯动量
+      这种现象的原因 更多的的可能是 在梯度较低的地形中 由于学习率自适应的原因 梯度小导致了学习率
+      效果变大的情况
 
+      关于步长自适应的总结：
+      加速度不断增大的情况下 自适应学习率效果会变小 
+      加速度减小的情况下 学习率效果自适应变大 
+      加速度恒定时 学习率趋近于设置的学习率   
+      以上状态 跟上升还是下降无关 
+'''
 
 class Base(ABC):
     def __init__(self, max_iters: int, lr: float,
@@ -120,18 +129,110 @@ class MulGaussMoment(Base):
             grad = self._cal_point_grad(point)
             with th.no_grad():
                 #带动量的梯度更新公式
-                theta = self.beta*theta-self.lr*grad
-                point = point+theta
+                theta = self.beta*theta+grad
+                point = point-self.lr*theta
             trajectory.append(point)
 
         return trajectory
+    
+class RMSprop(Base):
+    '''
+    r=0
+    r=beta*r+(1-beta)*square(grad)
+    point=point-lr/sqrt(r+eps)*grad
+    '''
+    def __init__(self, beta=0.9, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.beta = beta
+        self.r = 0 
+        
+
+    def grad_dense(self, init_pos):
+        trajectory = []
+        for i in range(self.max_iters):
+            grad = self._cal_point_grad(init_pos)
+            # 使用指数移动平均，r 不会无限增长
+            self.r = self.beta * self.r + (1 - self.beta) * th.square(grad)
+            pos = init_pos - self.lr / (th.sqrt(self.r + 1e-8)) * grad
+            
+            trajectory.append(init_pos)
+            init_pos = pos
+
+        return trajectory
+
+class RMSporp_moment(Base):
+
+    '''
+    单纯的动量与步长优化同时使用 不添加中心化的版本(不修正偏差)
+
+           theta,r=0,0
+
+    动量部分 theta=beta1*theta+grad
+    步长部分 r=beta2*r+(1-beta2)*np.square(grad)
+    梯度下降部分 point=point-lr/sqrt(r+eps)*theta
+    '''
+
+    def __init__(self, beta=0.9,beta1=0.9, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.beta=beta
+        self.beta1 = beta1
+        self.theta=0
+        self.r = 0 
+
+    def grad_dense(self, init_pos):
+        trajectory = []
+        for i in range(self.max_iters):
+            grad = self._cal_point_grad(init_pos)
+            self.theta = self.beta * self.theta + grad
+            self.r = self.beta1 * self.r + (1 - self.beta1) * th.square(grad)
+            pos = init_pos - self.lr / (th.sqrt(self.r) + 1e-8) * self.theta
+            
+            trajectory.append(init_pos)
+            init_pos = pos
+        return trajectory
+    
+class Adam(Base):
+    '''
+    m = beta1 * theta+grad
+    v = beta2 * v + (1 - beta2) * square(grad)
+    m_hat = m / (1 - beta1^t)
+    v_hat = v / (1 - beta2^t)
+    point = point - lr * m_hat / (sqrt(v_hat) + eps)
+    '''
+    def __init__(self, beta1=0.9, beta2=0.999, eps=1e-8, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.beta1 = beta1
+        self.beta2 = beta2
+        self.eps = eps
+
+    def grad_dense(self, init_pos):
+        m = 0
+        v = 0
+        trajectory=[]
+        for i in range(1, self.max_iters + 1):
+            grad = self._cal_point_grad(init_pos)
+            
+            m=self.beta1*m+(1-self.beta1)*grad  # 指数移动平均动量
+            v = self.beta2 * v + (1 - self.beta2) * th.square(grad)
+            
+            # 偏差修正
+            m_hat = m / (1 - self.beta1**i)
+            v_hat = v / (1 - self.beta2**i)
+            
+            pos = init_pos - self.lr * m_hat / (th.sqrt(v_hat) + self.eps)
+            
+            trajectory.append(init_pos)
+            init_pos = pos
+        return trajectory
+
 
 
 class Paint:
     def __init__(self, *args):
 
         self.x, self.y, self.z = args
-        self.fig = plt.figure()
+        self.fig = plt.figure(figsize=(10,8),dpi=80)
         self.ax: Any = self.fig.add_subplot(projection='3d')
 
     def draw_surf(self):
@@ -145,11 +246,19 @@ class Paint:
 
         st_style = [
             {"marker": "^", "color": "red", "s": 200},
-            {"marker": "*", "color": "blue", "s": 200}]
+            {"marker": "*", "color": "blue", "s": 200},
+            {'marker':'<','color':'orange','s':200},
+            {'marker':'>','color':'pink','s':200},
+            {'marker':'X','color':'grey','s':200},
+
+            ]
 
         tx_style = [
             [0.1, 0.9],
-            [0.9, 0.9]]
+            [0.9, 0.9],
+            [0.05,0.1],
+            [0.95,0.1],
+            [0.5,0.1]]
 
         scatters = []
         data_list = []
@@ -207,23 +316,41 @@ def main():
     means = th.tensor([[-1.5, -1.5], [1.5, 1.5]])
     covs = th.tensor([[[1.5, 1], [1, 1.5]],
                       [[1, 0.5], [0.5, 1]]])
+    weights = th.tensor([1.2, 1.5])
+    '''
+    xlims,ylims
+    means,covs,weights这些自定义参数 可以自由设置 
+    支持添加更多个高斯分布 只要保持 长度一致即可 协方差矩阵符合即可
+    '''
+
+    # means=th.tensor([[0.2,0.5],[1.2,1.8],[-2.3,1.3]])
+    # covs=th.tensor([[[2,0.3],[0.3,2]],
+    #                 [[1.5,0.6],[0.6,1.5]],
+    #                 [[2.5,1.2],[1.2,2.5]]])
+
+    # weights=th.tensor([0.3,0.4,0.5])
 
     lr = 0.3
     max_iters = 1000
-    weights = th.tensor([1.2, 1.5])
     mulgauss = MulGaussNormal(max_iters, lr, means, covs, weights)
     xs, ys, zs = mulgauss.make_data(xlims, ylims)
 
     mulmoment = MulGaussMoment(0.9, max_iters, lr, means, covs, weights)
+    rmsprop=RMSprop(0.9,max_iters,0.01,means,covs,weights)
+    rms_moment=RMSporp_moment(0.9,0.9,max_iters,0.01,means,covs,weights)
+    adam=Adam(0.9,0.9,1e-8,max_iters,0.01,means,covs,weights)
 
-    # point=[0.7,0.7]
-    point = th.tensor([1.2, 1.2])
+    # point=th.tensor([0.7,0.7],dtype=th.float32)
+    point = th.tensor([0.8,0.8],dtype=th.float32)
 
     normalxyz = cal_xyz(mulgauss, point)
     momentxyz = cal_xyz(mulmoment, point)
+    rmspropxyz=cal_xyz(rmsprop,point)
+    rms_momentxyz=cal_xyz(rms_moment,point)
+    adamxyz=cal_xyz(adam,point)
 
     paint = Paint(xs, ys, zs)
-    paint.run([normalxyz, momentxyz])
+    paint.run([normalxyz, momentxyz,rmspropxyz,rms_momentxyz,adamxyz])
 
 
 if __name__ == '__main__':
