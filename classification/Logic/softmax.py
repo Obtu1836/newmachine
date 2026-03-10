@@ -15,7 +15,7 @@ class LogicSoftmax(ClassifierMixin,BaseEstimator):
         self.weight=weight
     
     def loss(self,prob,mask,weights):
-        return -(mask*np.log(prob)*weights).sum()/len(mask)
+        return -(mask*np.log(prob+1e-6)*weights).sum()/weights.sum()
 
     def softmax(self,x,w):
         x=x.dot(w)
@@ -39,7 +39,7 @@ class LogicSoftmax(ClassifierMixin,BaseEstimator):
             weights=np.ones((m,1))
 
         while True:
-            grad=(-x.T.dot((mask-self.softmax(x,w))*weights))/m
+            grad=(-x.T.dot((mask-self.softmax(x,w))*weights))/weights.sum()
             w-=self.lr*grad
             new_loss=self.loss(self.softmax(x,w),mask,weights)
             deq_loss.append(new_loss)
