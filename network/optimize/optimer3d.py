@@ -152,9 +152,10 @@ class RMSprop(Base):
         for i in range(self.max_iters):
             grad = self._cal_point_grad(init_pos)
             # 使用指数移动平均，r 不会无限增长
-            self.r = self.beta * self.r + (1 - self.beta) * th.square(grad)
-            pos = init_pos - self.lr / (th.sqrt(self.r + 1e-8)) * grad
-            
+            with th.no_grad():
+                self.r = self.beta * self.r + (1 - self.beta) * th.square(grad)
+                pos = init_pos - self.lr / (th.sqrt(self.r + 1e-8)) * grad
+                
             trajectory.append(init_pos)
             init_pos = pos
 
@@ -184,9 +185,10 @@ class RMSporp_moment(Base):
         trajectory = []
         for i in range(self.max_iters):
             grad = self._cal_point_grad(init_pos)
-            self.theta = self.beta * self.theta + grad
-            self.r = self.beta1 * self.r + (1 - self.beta1) * th.square(grad)
-            pos = init_pos - self.lr / (th.sqrt(self.r) + 1e-8) * self.theta
+            with th.no_grad():
+                self.theta = self.beta * self.theta + grad
+                self.r = self.beta1 * self.r + (1 - self.beta1) * th.square(grad)
+                pos = init_pos - self.lr / (th.sqrt(self.r) + 1e-8) * self.theta
             
             trajectory.append(init_pos)
             init_pos = pos
@@ -212,15 +214,15 @@ class Adam(Base):
         trajectory=[]
         for i in range(1, self.max_iters + 1):
             grad = self._cal_point_grad(init_pos)
-            
-            m=self.beta1*m+(1-self.beta1)*grad  # 指数移动平均动量
-            v = self.beta2 * v + (1 - self.beta2) * th.square(grad)
-            
-            # 偏差修正
-            m_hat = m / (1 - self.beta1**i)
-            v_hat = v / (1 - self.beta2**i)
-            
-            pos = init_pos - self.lr * m_hat / (th.sqrt(v_hat) + self.eps)
+            with th.no_grad():
+                m=self.beta1*m+(1-self.beta1)*grad  # 指数移动平均动量
+                v = self.beta2 * v + (1 - self.beta2) * th.square(grad)
+                
+                # 偏差修正
+                m_hat = m / (1 - self.beta1**i)
+                v_hat = v / (1 - self.beta2**i)
+                
+                pos = init_pos - self.lr * m_hat / (th.sqrt(v_hat) + self.eps)
             
             trajectory.append(init_pos)
             init_pos = pos
