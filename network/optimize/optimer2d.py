@@ -245,7 +245,7 @@ class Paint:
 
             return  text,*scatters
 
-        ani = FuncAnimation(self.fig, update, frames=100, interval=50,
+        ani = FuncAnimation(self.fig, update, frames=500, interval=500,
                             repeat=False)
         self.ax.legend()
         # ani.save('new.gif',writer='pillow')
